@@ -1,0 +1,148 @@
+<div class="sub-tool-bar-container">
+  <mat-toolbar class="sub-tool-bar">
+    <span class="subnav-title">{{subMenuTitle}}</span>
+
+    <span class="fill-space"> </span>
+    <div class="font-size-16" style="width: 125px">
+      <mat-form-field appearance="legacy" style="margin-right: 25px" style="width: 110px">
+        <mat-select class="selector" (selectionChange)="onChange($event.value)" [(ngModel)]="sort">
+          <mat-option value="global">Global</mat-option>
+          <mat-option value="customer">Customer</mat-option>
+          <mat-option value="project">Project</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="font-size-16" style="width: 110px; margin-right: 170px" *ngIf="sort === 'project' && customerList">
+      <span style="font-family: Roboto; font-weight: normal">     Customer: </span>
+      <mat-form-field style="margin-right: 10px" appearance="legacy">
+        <mat-select class="selector" (selectionChange)="onChange($event.value)" [(ngModel)]="selectedCustomerId">
+          <mat-option *ngFor="let customer of customerList" value="{{customer.id}}">{{customer.name}}</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div>
+      <button style="float: right" mat-raised-button type="button" (click)="openNewFormDialog()">+ New</button>
+    </div>
+  </mat-toolbar>
+</div>
+
+<div class="list-container">
+  <div class="loading-shade" *ngIf="isLoading">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <div *ngIf="!isLoading && sort === 'global'">
+    <table style="width: 100%" mat-table [dataSource]="customerBillingRates" class="">
+
+      <ng-container matColumnDef="slaName">
+        <th mat-header-cell *matHeaderCellDef>SLA Code</th>
+        <td mat-cell *matCellDef="let row">
+          {{row.slaName}}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="fixedHourlyRate">
+        <th mat-header-cell *matHeaderCellDef>Fixed Hourly Rate</th>
+        <td mat-cell *matCellDef="let row">
+          {{row.fixedHourlyRate}}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="fixedHours">
+        <th mat-header-cell *matHeaderCellDef>Fixed Hours</th>
+        <td mat-cell *matCellDef="let row">
+          {{row.fixedHours}}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="additionalHourlyRate">
+        <th mat-header-cell *matHeaderCellDef>Additional Hourly Rate</th>
+        <td mat-cell *matCellDef="let row">
+          {{row.additionalHourlyRate}}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="additionalHours">
+        <th mat-header-cell *matHeaderCellDef>Additional Hours</th>
+        <td mat-cell *matCellDef="let row">
+          {{row.additionalHours}}
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumnsGlobal"></tr>
+      <tr mat-row (click)="openFormDialog(row)" *matRowDef="let row; columns: displayedColumnsGlobal;"></tr>
+    </table>
+  </div>
+
+
+  <div *ngIf="!isLoading && sort === 'customer'">
+    <table mat-table [dataSource]="customerBillingRates" multiTemplateDataRows>
+      <ng-container matColumnDef="{{column}}" *ngFor="let column of displayedColumnsCustomer">
+        <th mat-header-cell *matHeaderCellDef>{{column}}</th>
+        <td mat-cell *matCellDef="let element">{{element.customerName}}</td>
+      </ng-container>
+      <!-- expanded content column-->
+      <ng-container matColumnDef="expandedDetail">
+        <td style="padding: 0 !important;" mat-cell *matCellDef="let element" [attr.colspan]="innerCustomerColumn.length">
+          <div class="example-element-detail" *ngIf="element.cbr" [@detailExpand]="element == expandedElement? 'expanded':'collapsed'">
+            <div class="inner-table" *ngIf="expandedElement">
+              <table #innerTables mat-table [dataSource]="element.cbr">
+                <ng-container matColumnDef="{{innerColumn}}" *ngFor="let innerColumn of innerCustomerColumn">
+                  <th mat-header-cell *matHeaderCellDef>{{innerColumn}}</th>
+                  <td mat-cell *matCellDef="let element">{{element[innerColumn]}}</td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="innerCustomerColumn"></tr>
+                <tr (click)="openFormDialog(element.cbr[i])" mat-row *matRowDef="let row; let i = index; columns: innerCustomerColumn"></tr>
+              </table>
+            </div>
+          </div>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="displayedColumnsCustomer"></tr>
+      <tr mat-row *matRowDef="let element; columns: displayedColumnsCustomer" [class.example-element-row]="element.cbr" [class.example-expanded-row]="expandedElement === element" (click)="toggleRow(element)"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="example-detail-row"></tr>
+    </table>
+  </div>
+
+  <div *ngIf="!isLoading && sort === 'project'">
+    <div *ngIf="!selectedCustomerId">
+      Please select a customer
+    </div>
+    <div *ngIf="!isLoading && selectedCustomerId && customerBillingRates">
+      <table mat-table [dataSource]="customerBillingRates">
+        <ng-container matColumnDef="projectName">
+          <th mat-header-cell *matHeaderCellDef>Project Name</th>
+          <td mat-cell *matCellDef="let project">{{project.projectName}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="fixedHourlyRate">
+          <th mat-header-cell *matHeaderCellDef>Fixed Hourly Rate</th>
+          <td mat-cell *matCellDef="let project">{{project.fixedHourlyRate}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="fixedHours">
+          <th mat-header-cell *matHeaderCellDef>Fixed Hours</th>
+          <td mat-cell *matCellDef="let project">{{project.fixedHours}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="additionalHourlyRate">
+          <th mat-header-cell *matHeaderCellDef>Additional Hourly Rate</th>
+          <td mat-cell *matCellDef="let project">{{project.additionalHourlyRate}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="additionalHours">
+          <th mat-header-cell *matHeaderCellDef>Additional Hours</th>
+          <td mat-cell *matCellDef="let project">{{project.additionalHours}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="slaName">
+          <th mat-header-cell *matHeaderCellDef>SLA</th>
+          <td mat-cell *matCellDef="let project">{{project.slaName}}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="projectColumns"></tr>
+        <tr mat-row (click)="openFormDialog(row)" *matRowDef="let row; columns:projectColumns"></tr>
+      </table>
+    </div>
+  </div>
+</div>
